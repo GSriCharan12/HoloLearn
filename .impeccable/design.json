@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-08T21:40:00Z",
+  "title": "Design System: HoloLearn (Charcoal, Forest & Crimson)",
+  "aesthetic": "Charcoal Black, Forest Green & Crimson Red",
+  "extensions": {
+    "colorMeta": {
+      "charcoal-black": {
+        "role": "background",
+        "displayName": "Charcoal Black",
+        "canonical": "#171717"
+      },
+      "forest-green": {
+        "role": "surface",
+        "displayName": "Forest Green",
+        "canonical": "#06110C"
+      },
+      "crimson-red": {
+        "role": "primary",
+        "displayName": "Crimson Red",
+        "canonical": "#A31C1B"
+      },
+      "text-primary": {
+        "role": "text-primary",
+        "displayName": "Primary Text",
+        "canonical": "#EDEDED"
+      },
+      "text-muted": {
+        "role": "text-secondary",
+        "displayName": "Muted Text",
+        "canonical": "#9CA3AF"
+      },
+      "border-subtle": {
+        "role": "border",
+        "displayName": "Subtle Border",
+        "canonical": "rgba(255, 255, 255, 0.1)"
+      },
+      "border-crimson": {
+        "role": "border-active",
+        "displayName": "Crimson Border",
+        "canonical": "rgba(163, 28, 27, 0.35)"
+      },
+      "stem-heart": {
+        "role": "semantic-cardiology",
+        "displayName": "Cardiology Crimson",
+        "canonical": "#A31C1B"
+      },
+      "stem-space": {
+        "role": "semantic-astrophysics",
+        "displayName": "Astrophysics Sky Blue",
+        "canonical": "#38BDF8"
+      },
+      "stem-quantum": {
+        "role": "semantic-quantum",
+        "displayName": "Quantum Violet",
+        "canonical": "#A78BFA"
+      },
+      "stem-robotics": {
+        "role": "semantic-mechatronics",
+        "displayName": "Robotics Amber",
+        "canonical": "#F59E0B"
+      },
+      "viewport-dark": {
+        "role": "simulation-viewport",
+        "displayName": "Viewport Dark",
+        "canonical": "#06110C"
+      }
+    }
+  }
+}

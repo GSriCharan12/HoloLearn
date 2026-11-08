@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+:root {
+  /* Charcoal Black, Forest Green & Crimson Red Palette */
+  --background: #171717;
+  --foreground: #EDEDED;
+  --card: #06110C;
+  --card-foreground: #EDEDED;
+  --primary: #A31C1B;
+  --primary-foreground: #FFFFFF;
+  --secondary: #06110C;
+  --secondary-foreground: #EDEDED;
+  --muted: #1F2937;
+  --muted-foreground: #9CA3AF;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --accent: #A31C1B;
+
+  /* Global Surface Tokens */
+  --charcoal: #171717;
+  --forest-green: #06110C;
+  --crimson-red: #A31C1B;
+  --text-primary: #EDEDED;
+  --text-muted: #9CA3AF;
+  --stone-border: rgba(255, 255, 255, 0.1);
+
+  /* Fallback aliases for smooth theme transition */
+  --bg-ivory: #171717;
+  --surface-paper: #06110C;
+  --surface-sand: #171717;
+  --text-ink: #EDEDED;
+  --brand-teal: #A31C1B;
+  --slate-blue: #38BDF8;
+  --antique-brass: #F59E0B;
+
+  /* STEM Discipline Semantic Tokens */
+  --stem-heart: #A31C1B;
+  --stem-space: #38BDF8;
+  --stem-quantum: #A78BFA;
+  --stem-robotics: #F59E0B;
+
+  /* 3D Simulation Viewport */
+  --viewport-bg: #06110C;
+  --viewport-panel: rgba(6, 17, 12, 0.92);
+  --viewport-border: rgba(163, 28, 27, 0.25);
+  --viewport-text: #EDEDED;
+  --viewport-text-muted: #9CA3AF;
+
+  --white: #ffffff;
+  --black: #000000;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+
+  --color-charcoal: #171717;
+  --color-forest: #06110C;
+  --color-crimson: #A31C1B;
+
+  --color-ivory: #171717;
+  --color-paper: #06110C;
+  --color-sand: #171717;
+  --color-ink: #EDEDED;
+  --color-slate-muted: #9CA3AF;
+  --color-teal-research: #A31C1B;
+  --color-slate-blue: #38BDF8;
+  --color-brass: #F59E0B;
+  --color-stone: rgba(255, 255, 255, 0.1);
+
+  --color-stem-heart: #A31C1B;
+  --color-stem-space: #38BDF8;
+  --color-stem-quantum: #A78BFA;
+  --color-stem-robotics: #F59E0B;
+
+  --color-viewport-dark: #06110C;
+}
+
+body {
+  background-color: #171717;
+  color: #EDEDED;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  caret-color: #A31C1B;
+}
+
+:focus-visible {
+  outline: 2px solid #A31C1B;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(163, 28, 27, 0.35);
+  color: #FFFFFF;
+}
+
+/* Custom Charcoal & Forest scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #171717;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #06110C;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A31C1B;
+}
+
+/* Shimmer Animation Keyframes */
+@keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+  }
+}
+
+@keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+  }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+  }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+  }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+  }
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide var(--speed) ease-in-out infinite alternate;
+}
+
+.animate-spin-around {
+  animation: spin-around calc(var(--speed) * 2) infinite linear;
+}
+
+/* Precision grid utilities */
+.editorial-grid {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}

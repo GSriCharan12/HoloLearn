@@ -1,0 +1,2280 @@
+1. SCROLL MEDIA EXPANSION
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+scroll-expansion-hero.tsx
+"use client";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+  TouchEvent,
+  WheelEvent,
+} from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
+
+interface ScrollExpandMediaProps {
+  mediaType?: "video" | "image";
+  mediaSrc: string;
+  posterSrc?: string;
+  bgImageSrc: string;
+  title?: string;
+  date?: string;
+  scrollToExpand?: string;
+  textBlend?: boolean;
+  children?: ReactNode;
+}
+
+const ScrollExpandMedia = ({
+  mediaType = "video",
+  mediaSrc,
+  posterSrc,
+  bgImageSrc,
+  title,
+  date,
+  scrollToExpand,
+  textBlend,
+  children,
+}: ScrollExpandMediaProps) => {
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
+  const [showContent, setShowContent] = useState<boolean>(false);
+  const [mediaFullyExpanded, setMediaFullyExpanded] = useState<boolean>(false);
+  const [touchStartY, setTouchStartY] = useState<number>(0);
+  const [isMobileState, setIsMobileState] = useState<boolean>(false);
+
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setScrollProgress(0);
+    setShowContent(false);
+    setMediaFullyExpanded(false);
+  }, [mediaType]);
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (mediaFullyExpanded && e.deltaY < 0 && window.scrollY <= 5) {
+        setMediaFullyExpanded(false);
+        e.preventDefault();
+      } else if (!mediaFullyExpanded) {
+        e.preventDefault();
+        const scrollDelta = e.deltaY * 0.0009;
+        const newProgress = Math.min(
+          Math.max(scrollProgress + scrollDelta, 0),
+          1,
+        );
+        setScrollProgress(newProgress);
+
+        if (newProgress >= 1) {
+          setMediaFullyExpanded(true);
+          setShowContent(true);
+        } else if (newProgress < 0.75) {
+          setShowContent(false);
+        }
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      setTouchStartY(e.touches[0].clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartY) return;
+
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchStartY - touchY;
+
+      if (mediaFullyExpanded && deltaY < -20 && window.scrollY <= 5) {
+        setMediaFullyExpanded(false);
+        e.preventDefault();
+      } else if (!mediaFullyExpanded) {
+        e.preventDefault();
+        // Increase sensitivity for mobile, especially when scrolling back
+        const scrollFactor = deltaY < 0 ? 0.008 : 0.005; // Higher sensitivity for scrolling back
+        const scrollDelta = deltaY * scrollFactor;
+        const newProgress = Math.min(
+          Math.max(scrollProgress + scrollDelta, 0),
+          1,
+        );
+        setScrollProgress(newProgress);
+
+        if (newProgress >= 1) {
+          setMediaFullyExpanded(true);
+          setShowContent(true);
+        } else if (newProgress < 0.75) {
+          setShowContent(false);
+        }
+
+        setTouchStartY(touchY);
+      }
+    };
+
+    const handleTouchEnd = (): void => {
+      setTouchStartY(0);
+    };
+
+    const handleScroll = (): void => {
+      if (!mediaFullyExpanded) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    window.addEventListener("wheel", handleWheel as unknown as EventListener, {
+      passive: false,
+    });
+    window.addEventListener("scroll", handleScroll as EventListener);
+    window.addEventListener(
+      "touchstart",
+      handleTouchStart as unknown as EventListener,
+      { passive: false },
+    );
+    window.addEventListener(
+      "touchmove",
+      handleTouchMove as unknown as EventListener,
+      { passive: false },
+    );
+    window.addEventListener("touchend", handleTouchEnd as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        "wheel",
+        handleWheel as unknown as EventListener,
+      );
+      window.removeEventListener("scroll", handleScroll as EventListener);
+      window.removeEventListener(
+        "touchstart",
+        handleTouchStart as unknown as EventListener,
+      );
+      window.removeEventListener(
+        "touchmove",
+        handleTouchMove as unknown as EventListener,
+      );
+      window.removeEventListener("touchend", handleTouchEnd as EventListener);
+    };
+  }, [scrollProgress, mediaFullyExpanded, touchStartY]);
+
+  useEffect(() => {
+    const checkIfMobile = (): void => {
+      setIsMobileState(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
+
+  const mediaWidth = 300 + scrollProgress * (isMobileState ? 650 : 1250);
+  const mediaHeight = 400 + scrollProgress * (isMobileState ? 200 : 400);
+  const textTranslateX = scrollProgress * (isMobileState ? 180 : 150);
+
+  const firstWord = title ? title.split(" ")[0] : "";
+  const restOfTitle = title ? title.split(" ").slice(1).join(" ") : "";
+
+  return (
+    <div
+      ref={sectionRef}
+      className="transition-colors duration-700 ease-in-out overflow-x-hidden"
+    >
+      <section className="relative flex flex-col items-center justify-start min-h-[100dvh]">
+        <div className="relative w-full flex flex-col items-center min-h-[100dvh]">
+          <motion.div
+            className="absolute inset-0 z-0 h-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 - scrollProgress }}
+            transition={{ duration: 0.1 }}
+          >
+            <Image
+              src={bgImageSrc}
+              alt="Background"
+              width={1920}
+              height={1080}
+              className="w-screen h-screen"
+              style={{
+                objectFit: "cover",
+                objectPosition: "center",
+              }}
+              priority
+            />
+            <div className="absolute inset-0 bg-black/10" />
+          </motion.div>
+
+          <div className="container mx-auto flex flex-col items-center justify-start relative z-10">
+            <div className="flex flex-col items-center justify-center w-full h-[100dvh] relative">
+              <div
+                className="absolute z-0 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-none rounded-2xl"
+                style={{
+                  width: `${mediaWidth}px`,
+                  height: `${mediaHeight}px`,
+                  maxWidth: "95vw",
+                  maxHeight: "85vh",
+                  boxShadow: "0px 0px 50px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                {mediaType === "video" ? (
+                  mediaSrc.includes("youtube.com") ? (
+                    <div className="relative w-full h-full pointer-events-none">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={
+                          mediaSrc.includes("embed")
+                            ? mediaSrc +
+                              (mediaSrc.includes("?") ? "&" : "?") +
+                              "autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&disablekb=1&modestbranding=1"
+                            : mediaSrc.replace("watch?v=", "embed/") +
+                              "?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&disablekb=1&modestbranding=1&playlist=" +
+                              mediaSrc.split("v=")[1]
+                        }
+                        className="w-full h-full rounded-xl"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                      <div
+                        className="absolute inset-0 z-10"
+                        style={{ pointerEvents: "none" }}
+                      ></div>
+
+                      <motion.div
+                        className="absolute inset-0 bg-black/30 rounded-xl"
+                        initial={{ opacity: 0.7 }}
+                        animate={{ opacity: 0.5 - scrollProgress * 0.3 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative w-full h-full pointer-events-none">
+                      <video
+                        src={mediaSrc}
+                        poster={posterSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        className="w-full h-full object-cover rounded-xl"
+                        controls={false}
+                        disablePictureInPicture
+                        disableRemotePlayback
+                      />
+                      <div
+                        className="absolute inset-0 z-10"
+                        style={{ pointerEvents: "none" }}
+                      ></div>
+
+                      <motion.div
+                        className="absolute inset-0 bg-black/30 rounded-xl"
+                        initial={{ opacity: 0.7 }}
+                        animate={{ opacity: 0.5 - scrollProgress * 0.3 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={mediaSrc}
+                      alt={title || "Media content"}
+                      width={1280}
+                      height={720}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+
+                    <motion.div
+                      className="absolute inset-0 bg-black/50 rounded-xl"
+                      initial={{ opacity: 0.7 }}
+                      animate={{ opacity: 0.7 - scrollProgress * 0.3 }}
+                      transition={{ duration: 0.2 }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col items-center text-center relative z-10 mt-4 transition-none">
+                  {date && (
+                    <p
+                      className="text-2xl text-blue-200"
+                      style={{ transform: `translateX(-${textTranslateX}vw)` }}
+                    >
+                      {date}
+                    </p>
+                  )}
+                  {scrollToExpand && (
+                    <p
+                      className="text-blue-200 font-medium text-center"
+                      style={{ transform: `translateX(${textTranslateX}vw)` }}
+                    >
+                      {scrollToExpand}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div
+                className={`flex items-center justify-center text-center gap-4 w-full relative z-10 transition-none flex-col ${
+                  textBlend ? "mix-blend-difference" : "mix-blend-normal"
+                }`}
+              >
+                <motion.h2
+                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-blue-200 transition-none"
+                  style={{ transform: `translateX(-${textTranslateX}vw)` }}
+                >
+                  {firstWord}
+                </motion.h2>
+                <motion.h2
+                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-center text-blue-200 transition-none"
+                  style={{ transform: `translateX(${textTranslateX}vw)` }}
+                >
+                  {restOfTitle}
+                </motion.h2>
+              </div>
+            </div>
+
+            <motion.section
+              className="flex flex-col w-full px-8 py-10 md:px-16 lg:py-20"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: showContent ? 1 : 0 }}
+              transition={{ duration: 0.7 }}
+            >
+              {children}
+            </motion.section>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default ScrollExpandMedia;
+
+
+demo.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import ScrollExpandMedia from "@/components/ui/scroll-expansion-hero";
+
+interface MediaAbout {
+  overview: string;
+  conclusion: string;
+}
+
+interface MediaContent {
+  src: string;
+  poster?: string;
+  background: string;
+  title: string;
+  date: string;
+  scrollToExpand: string;
+  about: MediaAbout;
+}
+
+interface MediaContentCollection {
+  [key: string]: MediaContent;
+}
+
+const sampleMediaContent: MediaContentCollection = {
+  video: {
+    src: "https://me7aitdbxq.ufs.sh/f/2wsMIGDMQRdYuZ5R8ahEEZ4aQK56LizRdfBSqeDMsmUIrJN1",
+    poster:
+      "https://cdn.21st.dev/assets/localized/5bb1be92440e920def3eb36ad5a610d609240616cd8b11c0effe6b92bcafe06e.jpg",
+    background:
+      "https://me7aitdbxq.ufs.sh/f/2wsMIGDMQRdYMNjMlBUYHaeYpxduXPVNwf8mnFA61L7rkcoS",
+    title: "Immersive Video Experience",
+    date: "Cosmic Journey",
+    scrollToExpand: "Scroll to Expand Demo",
+    about: {
+      overview:
+        "This is a demonstration of the ScrollExpandMedia component with a video. As you scroll, the video expands to fill more of the screen, creating an immersive experience. This component is perfect for showcasing video content in a modern, interactive way.",
+      conclusion:
+        "The ScrollExpandMedia component provides a unique way to engage users with your content through interactive scrolling. Try switching between video and image modes to see different implementations.",
+    },
+  },
+  image: {
+    src: "https://cdn.21st.dev/assets/mirror/ad/adc771c0e00a1084360e689009e485c7990c973d0fe12ffc8fd5b2b8a6029af2.jpg",
+    background:
+      "https://cdn.21st.dev/assets/mirror/57/5738a2d4c1108a2f418ed6496233d20f643925a998f323a30cb8393d0a122f75.jpg",
+    title: "Dynamic Image Showcase",
+    date: "Underwater Adventure",
+    scrollToExpand: "Scroll to Expand Demo",
+    about: {
+      overview:
+        "This is a demonstration of the ScrollExpandMedia component with an image. The same smooth expansion effect works beautifully with static images, allowing you to create engaging visual experiences without video content.",
+      conclusion:
+        "The ScrollExpandMedia component works equally well with images and videos. This flexibility allows you to choose the media type that best suits your content while maintaining the same engaging user experience.",
+    },
+  },
+};
+
+const MediaContent = ({ mediaType }: { mediaType: "video" | "image" }) => {
+  const currentMedia = sampleMediaContent[mediaType];
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-3xl font-bold mb-6 text-black dark:text-white">
+        About This Component
+      </h2>
+      <p className="text-lg mb-8 text-black dark:text-white">
+        {currentMedia.about.overview}
+      </p>
+
+      <p className="text-lg mb-8 text-black dark:text-white">
+        {currentMedia.about.conclusion}
+      </p>
+    </div>
+  );
+};
+
+export const VideoExpansionTextBlend = () => {
+  const mediaType = "video";
+  const currentMedia = sampleMediaContent[mediaType];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    const resetEvent = new Event("resetSection");
+    window.dispatchEvent(resetEvent);
+  }, []);
+
+  return (
+    <div className="min-h-screen">
+      <ScrollExpandMedia
+        mediaType={mediaType}
+        mediaSrc={currentMedia.src}
+        posterSrc={currentMedia.poster}
+        bgImageSrc={currentMedia.background}
+        title={currentMedia.title}
+        date={currentMedia.date}
+        scrollToExpand={currentMedia.scrollToExpand}
+        textBlend
+      >
+        <MediaContent mediaType={mediaType} />
+      </ScrollExpandMedia>
+    </div>
+  );
+};
+
+export const ImageExpansionTextBlend = () => {
+  const mediaType = "image";
+  const currentMedia = sampleMediaContent[mediaType];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    const resetEvent = new Event("resetSection");
+    window.dispatchEvent(resetEvent);
+  }, []);
+
+  return (
+    <div className="min-h-screen">
+      <ScrollExpandMedia
+        mediaType={mediaType}
+        mediaSrc={currentMedia.src}
+        bgImageSrc={currentMedia.background}
+        title={currentMedia.title}
+        date={currentMedia.date}
+        scrollToExpand={currentMedia.scrollToExpand}
+        textBlend
+      >
+        <MediaContent mediaType={mediaType} />
+      </ScrollExpandMedia>
+    </div>
+  );
+};
+
+export const VideoExpansion = () => {
+  const mediaType = "video";
+  const currentMedia = sampleMediaContent[mediaType];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    const resetEvent = new Event("resetSection");
+    window.dispatchEvent(resetEvent);
+  }, []);
+
+  return (
+    <div className="min-h-screen">
+      <ScrollExpandMedia
+        mediaType={mediaType}
+        mediaSrc={currentMedia.src}
+        posterSrc={currentMedia.poster}
+        bgImageSrc={currentMedia.background}
+        title={currentMedia.title}
+        date={currentMedia.date}
+        scrollToExpand={currentMedia.scrollToExpand}
+      >
+        <MediaContent mediaType={mediaType} />
+      </ScrollExpandMedia>
+    </div>
+  );
+};
+
+export const ImageExpansion = () => {
+  const mediaType = "image";
+  const currentMedia = sampleMediaContent[mediaType];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    const resetEvent = new Event("resetSection");
+    window.dispatchEvent(resetEvent);
+  }, []);
+
+  return (
+    <div className="min-h-screen">
+      <ScrollExpandMedia
+        mediaType={mediaType}
+        mediaSrc={currentMedia.src}
+        bgImageSrc={currentMedia.background}
+        title={currentMedia.title}
+        date={currentMedia.date}
+        scrollToExpand={currentMedia.scrollToExpand}
+      >
+        <MediaContent mediaType={mediaType} />
+      </ScrollExpandMedia>
+    </div>
+  );
+};
+
+function Demo() {
+  const [mediaType, setMediaType] = useState("video");
+  const currentMedia = sampleMediaContent[mediaType];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    const resetEvent = new Event("resetSection");
+    window.dispatchEvent(resetEvent);
+  }, [mediaType]);
+
+  return (
+    <div className="min-h-screen">
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={() => setMediaType("video")}
+          className={`px-4 py-2 rounded-lg ${
+            mediaType === "video"
+              ? "bg-white text-black"
+              : "bg-black/50 text-white border border-white/30"
+          }`}
+        >
+          Video
+        </button>
+
+        <button
+          onClick={() => setMediaType("image")}
+          className={`px-4 py-2 rounded-lg ${
+            mediaType === "image"
+              ? "bg-white text-black"
+              : "bg-black/50 text-white border border-white/30"
+          }`}
+        >
+          Image
+        </button>
+      </div>
+
+      <ScrollExpandMedia
+        mediaType={mediaType as "video" | "image"}
+        mediaSrc={currentMedia.src}
+        posterSrc={mediaType === "video" ? currentMedia.poster : undefined}
+        bgImageSrc={currentMedia.background}
+        title={currentMedia.title}
+        date={currentMedia.date}
+        scrollToExpand={currentMedia.scrollToExpand}
+      >
+        <MediaContent mediaType={mediaType as "video" | "image"} />
+      </ScrollExpandMedia>
+    </div>
+  );
+}
+
+export default Demo;
+
+```
+
+Install NPM dependencies:
+```bash
+next, framer-motion
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them
+
+
+2. AURORA BACKGROUND
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+aurora-background.tsx
+"use client";
+import { cn } from "@/lib/utils";
+import React, { ReactNode } from "react";
+
+interface AuroraBackgroundProps extends React.HTMLProps<HTMLDivElement> {
+  children: ReactNode;
+  showRadialGradient?: boolean;
+}
+
+export const AuroraBackground = ({
+  className,
+  children,
+  showRadialGradient = true,
+  ...props
+}: AuroraBackgroundProps) => {
+  return (
+    <main>
+      <div
+        className={cn(
+          "relative flex flex-col  h-[100vh] items-center justify-center bg-zinc-50 dark:bg-zinc-900  text-slate-950 transition-bg",
+          className
+        )}
+        {...props}
+      >
+        <div className="absolute inset-0 overflow-hidden">
+          <div
+            //   I'm sorry but this is what peak developer performance looks like // trigger warning
+            className={cn(
+              `
+            [--white-gradient:repeating-linear-gradient(100deg,var(--white)_0%,var(--white)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--white)_16%)]
+            [--dark-gradient:repeating-linear-gradient(100deg,var(--black)_0%,var(--black)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--black)_16%)]
+            [--aurora:repeating-linear-gradient(100deg,var(--blue-500)_10%,var(--indigo-300)_15%,var(--blue-300)_20%,var(--violet-200)_25%,var(--blue-400)_30%)]
+            [background-image:var(--white-gradient),var(--aurora)]
+            dark:[background-image:var(--dark-gradient),var(--aurora)]
+            [background-size:300%,_200%]
+            [background-position:50%_50%,50%_50%]
+            filter blur-[10px] invert dark:invert-0
+            after:content-[""] after:absolute after:inset-0 after:[background-image:var(--white-gradient),var(--aurora)] 
+            after:dark:[background-image:var(--dark-gradient),var(--aurora)]
+            after:[background-size:200%,_100%] 
+            after:animate-aurora after:[background-attachment:fixed] after:mix-blend-difference
+            pointer-events-none
+            absolute -inset-[10px] opacity-50 will-change-transform`,
+
+              showRadialGradient &&
+                `[mask-image:radial-gradient(ellipse_at_100%_0%,black_10%,var(--transparent)_70%)]`
+            )}
+          ></div>
+        </div>
+        {children}
+      </div>
+    </main>
+  );
+};
+
+
+demo.tsx
+"use client";
+
+import { motion } from "framer-motion";
+import React from "react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+
+export function AuroraBackgroundDemo() {
+  return (
+    <AuroraBackground>
+      <motion.div
+        initial={{ opacity: 0.0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{
+          delay: 0.3,
+          duration: 0.8,
+          ease: "easeInOut",
+        }}
+        className="relative flex flex-col gap-4 items-center justify-center px-4"
+      >
+        <div className="text-3xl md:text-7xl font-bold dark:text-white text-center">
+          Background lights are cool you know.
+        </div>
+        <div className="font-extralight text-base md:text-4xl dark:text-neutral-200 py-4">
+          And this, is chemical burn.
+        </div>
+        <button className="bg-black dark:bg-white rounded-full w-fit text-white dark:text-black px-4 py-2">
+          Debug now
+        </button>
+      </motion.div>
+    </AuroraBackground>
+  );
+}
+
+```
+
+Install NPM dependencies:
+```bash
+framer-motion
+```
+
+Extend existing tailwind.config.js with this code:
+```js
+const {
+  default: flattenColorPalette,
+} = require("tailwindcss/lib/util/flattenColorPalette");
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    // your paths
+    "./src/**/*.{ts,tsx}",
+  ],
+  darkMode: "class",
+  theme: {
+    extend: {
+      animation: {
+        aurora: "aurora 60s linear infinite",
+      },
+      keyframes: {
+        aurora: {
+          from: {
+            backgroundPosition: "50% 50%, 50% 50%",
+          },
+          to: {
+            backgroundPosition: "350% 50%, 350% 50%",
+          },
+        },
+      },
+    },
+  },
+  plugins: [addVariablesForColors],
+};
+
+// This plugin adds each Tailwind color as a global CSS variable, e.g. var(--gray-200).
+function addVariablesForColors({ addBase, theme }: any) {
+  let allColors = flattenColorPalette(theme("colors"));
+  let newVars = Object.fromEntries(
+    Object.entries(allColors).map(([key, val]) => [`--${key}`, val])
+  );
+
+  addBase({
+    ":root": newVars,
+  });
+}
+
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them
+
+3. TEXT ROTATE
+Help me add the <RotatingText /> component from React Bits to my project.
+
+Variant: JS-CSS (JavaScript, plain CSS)
+Docs: https://reactbits.dev/text-animations/rotating-text
+Component source + dependencies (JSON): https://reactbits.dev/r/RotatingText-JS-CSS.json
+
+Install it with:
+npx shadcn@latest add @react-bits/RotatingText-JS-CSS
+
+Use this configuration:
+import RotatingText from './RotatingText';
+
+<RotatingText
+  texts={['React', 'Bits', 'Is', 'Cool!']}
+  effect="slide"
+  direction="up"
+  highlight={true}
+  highlightColor="#a855f7"
+  staggerFrom="last"
+  staggerDuration={0.025}
+  splitLevelClassName="overflow-hidden pb-0.5 sm:pb-1 md:pb-1"
+  rotationInterval={2000}
+/>
+
+Please fetch the registry JSON above for the exact source, install any listed dependencies, add the component to my project, and wire it into the right place.
+If this is not the right component, the full library index is at https://reactbits.dev/llms.txt.
+
+4. BENTO GRID
+import { CalendarIcon, FileTextIcon } from "@radix-ui/react-icons"
+import { BellIcon, Share2Icon } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import AnimatedBeamMultipleOutputDemo from "@/registry/example/animated-beam-multiple-outputs"
+import AnimatedListDemo from "@/registry/example/animated-list-demo"
+import { BentoCard, BentoGrid } from "@/registry/magicui/bento-grid"
+import { Marquee } from "@/registry/magicui/marquee"
+
+const files = [
+  {
+    name: "bitcoin.pdf",
+    body: "Bitcoin is a cryptocurrency invented in 2008 by an unknown person or group of people using the name Satoshi Nakamoto.",
+  },
+  {
+    name: "finances.xlsx",
+    body: "A spreadsheet or worksheet is a file made of rows and columns that help sort data, arrange data easily, and calculate numerical data.",
+  },
+  {
+    name: "logo.svg",
+    body: "Scalable Vector Graphics is an Extensible Markup Language-based vector image format for two-dimensional graphics with support for interactivity and animation.",
+  },
+  {
+    name: "keys.gpg",
+    body: "GPG keys are used to encrypt and decrypt email, files, directories, and whole disk partitions and to authenticate messages.",
+  },
+  {
+    name: "seed.txt",
+    body: "A seed phrase, seed recovery phrase or backup seed phrase is a list of words which store all the information needed to recover Bitcoin funds on-chain.",
+  },
+]
+
+const features = [
+  {
+    Icon: FileTextIcon,
+    name: "Save your files",
+    description: "We automatically save your files as you type.",
+    href: "#",
+    cta: "Learn more",
+    className: "col-span-3 lg:col-span-1",
+    background: (
+      <Marquee
+        pauseOnHover
+        className="absolute top-10 [mask-image:linear-gradient(to_top,transparent_40%,#000_100%)] [--duration:20s]"
+      >
+        {files.map((f, idx) => (
+          <figure
+            key={idx}
+            className={cn(
+              "relative w-32 cursor-pointer overflow-hidden rounded-xl border p-4",
+              "border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]",
+              "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]",
+              "transform-gpu blur-[1px] transition-all duration-300 ease-out hover:blur-none"
+            )}
+          >
+            <div className="flex flex-row items-center gap-2">
+              <div className="flex flex-col">
+                <figcaption className="text-sm font-medium dark:text-white">
+                  {f.name}
+                </figcaption>
+              </div>
+            </div>
+            <blockquote className="mt-2 text-xs">{f.body}</blockquote>
+          </figure>
+        ))}
+      </Marquee>
+    ),
+  },
+  {
+    Icon: BellIcon,
+    name: "Notifications",
+    description: "Get notified when something happens.",
+    href: "#",
+    cta: "Learn more",
+    className: "col-span-3 lg:col-span-2",
+    background: (
+      <AnimatedListDemo className="absolute top-4 right-2 h-[300px] w-full scale-75 border-none [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-90" />
+    ),
+  },
+  {
+    Icon: Share2Icon,
+    name: "Integrations",
+    description: "Supports 100+ integrations and counting.",
+    href: "#",
+    cta: "Learn more",
+    className: "col-span-3 lg:col-span-2",
+    background: (
+      <AnimatedBeamMultipleOutputDemo className="absolute top-4 right-2 h-[300px] border-none [mask-image:linear-gradient(to_top,transparent_10%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-105" />
+    ),
+  },
+  {
+    Icon: CalendarIcon,
+    name: "Calendar",
+    description: "Use the calendar to filter your files by date.",
+    className: "col-span-3 lg:col-span-1",
+    href: "#",
+    cta: "Learn more",
+    background: (
+      <Calendar
+        mode="single"
+        selected={new Date(2022, 4, 11, 0, 0, 0)}
+        className="absolute top-10 right-0 origin-top scale-75 rounded-md border [mask-image:linear-gradient(to_top,transparent_40%,#000_100%)] transition-all duration-300 ease-out group-hover:scale-90"
+      />
+    ),
+  },
+]
+
+export function BentoDemo() {
+  return (
+    <BentoGrid>
+      {features.map((feature, idx) => (
+        <BentoCard key={idx} {...feature} />
+      ))}
+    </BentoGrid>
+  )
+}
+
+5. SPOTLIGHT CARD
+"use client";
+import React from "react";
+import { Spotlight } from "@/components/ui/spotlight-new";
+
+export function SpotlightNewDemo() {
+  return (
+    <div className="h-[40rem] w-full rounded-md flex md:items-center md:justify-center bg-black/[0.96] antialiased bg-grid-white/[0.02] relative overflow-hidden">
+      <Spotlight />
+      <div className=" p-4 max-w-7xl  mx-auto relative z-10  w-full pt-20 md:pt-0">
+        <h1 className="text-4xl md:text-7xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 bg-opacity-50">
+          Spotlight <br /> which is not overused.
+        </h1>
+        <p className="mt-4 font-normal text-base text-neutral-300 max-w-lg text-center mx-auto">
+          A subtle yet effective spotlight effect, because the previous version
+          is used a bit too much these days.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+6. FLOATING DOCK
+import React from "react";
+import { FloatingDock } from "@/components/ui/floating-dock";
+import {
+  IconBrandGithub,
+  IconBrandX,
+  IconExchange,
+  IconHome,
+  IconNewSection,
+  IconTerminal2,
+} from "@tabler/icons-react";
+
+export function FloatingDockDemo() {
+  const links = [
+    {
+      title: "Home",
+      icon: (
+        <IconHome className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+
+    {
+      title: "Products",
+      icon: (
+        <IconTerminal2 className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+    {
+      title: "Components",
+      icon: (
+        <IconNewSection className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+    {
+      title: "Aceternity UI",
+      icon: (
+        <img
+          src="https://assets.aceternity.com/logo-dark.png"
+          width={20}
+          height={20}
+          alt="Aceternity Logo"
+        />
+      ),
+      href: "#",
+    },
+    {
+      title: "Changelog",
+      icon: (
+        <IconExchange className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+
+    {
+      title: "Twitter",
+      icon: (
+        <IconBrandX className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+    {
+      title: "GitHub",
+      icon: (
+        <IconBrandGithub className="h-full w-full text-neutral-500 dark:text-neutral-300" />
+      ),
+      href: "#",
+    },
+  ];
+  return (
+    <div className="flex items-center justify-center h-[35rem] w-full">
+      <FloatingDock
+        mobileClassName="translate-y-20" // only for demo, remove for production
+        items={links}
+      />
+    </div>
+  );
+}
+
+7. BEAMS BACKGROUND
+"use client";
+import React from "react";
+import { BackgroundBeams } from "../ui/background-beams";
+
+export function BackgroundBeamsDemo() {
+  return (
+    <div className="h-[40rem] w-full rounded-md bg-neutral-950 relative flex flex-col items-center justify-center antialiased">
+      <div className="max-w-2xl mx-auto p-4">
+        <h1 className="relative z-10 text-lg md:text-7xl  bg-clip-text text-transparent bg-gradient-to-b from-neutral-200 to-neutral-600  text-center font-sans font-bold">
+          Join the waitlist
+        </h1>
+        <p></p>
+        <p className="text-neutral-500 max-w-lg mx-auto my-2 text-sm text-center relative z-10">
+          Welcome to MailJet, the best transactional email service on the web.
+          We provide reliable, scalable, and customizable email solutions for
+          your business. Whether you&apos;re sending order confirmations,
+          password reset emails, or promotional campaigns, MailJet has got you
+          covered.
+        </p>
+        <input
+          type="text"
+          placeholder="hi@manuarora.in"
+          className="rounded-lg border border-neutral-800 focus:ring-2 focus:ring-teal-500  w-full relative z-10 mt-4  bg-neutral-950 placeholder:text-neutral-700"
+        />
+      </div>
+      <BackgroundBeams />
+    </div>
+  );
+}
+
+8. LIQUID GLASS BUTTON 
+// The example icons come from @tabler/icons-react: npm i @tabler/icons-react
+import { IconArrowRight } from "@tabler/icons-react";
+import { LiquidGlassButton } from "@/components/wensity/liquid-glass-button";
+
+export default function Example() {
+  return (
+    <div
+      className="flex min-h-[420px] items-center justify-center gap-4 bg-cover bg-center"
+      style={{ backgroundImage: "url(https://assets.wensity.com/photos/portrait/lavender-fields.webp)" }}
+    >
+      <LiquidGlassButton size="lg">
+        Explore the collection
+        <IconArrowRight size={20} />
+      </LiquidGlassButton>
+      <LiquidGlassButton size="lg" tint="#0a84ff">
+        Get started
+      </LiquidGlassButton>
+    </div>
+  );
+}
+
+9. GLOWING EFFECT
+"use client";
+
+import { Box, Lock, Search, Settings, Sparkles } from "lucide-react";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+
+export function GlowingEffectDemoSecond() {
+  return (
+    <ul className="grid grid-cols-1 grid-rows-none gap-4 md:grid-cols-12 md:grid-rows-3 lg:gap-4 xl:max-h-[34rem] xl:grid-rows-2">
+      <GridItem
+        area="md:[grid-area:1/1/2/7] xl:[grid-area:1/1/2/5]"
+        icon={<Box className="h-4 w-4 text-black dark:text-neutral-400" />}
+        title="Do things the right way"
+        description="Running out of copy so I'll write anything."
+      />
+
+      <GridItem
+        area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
+        icon={<Settings className="h-4 w-4 text-black dark:text-neutral-400" />}
+        title="The best AI code editor ever."
+        description="Yes, it's true. I'm not even kidding. Ask my mom if you don't believe me."
+      />
+
+      <GridItem
+        area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
+        icon={<Lock className="h-4 w-4 text-black dark:text-neutral-400" />}
+        title="You should buy Aceternity UI Pro"
+        description="It's the best money you'll ever spend"
+      />
+
+      <GridItem
+        area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
+        icon={<Sparkles className="h-4 w-4 text-black dark:text-neutral-400" />}
+        title="This card is also built by Cursor"
+        description="I'm not even kidding. Ask my mom if you don't believe me."
+      />
+
+      <GridItem
+        area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
+        icon={<Search className="h-4 w-4 text-black dark:text-neutral-400" />}
+        title="Coming soon on Aceternity UI"
+        description="I'm writing the code as I record this, no shit."
+      />
+    </ul>
+  );
+}
+
+interface GridItemProps {
+  area: string;
+  icon: React.ReactNode;
+  title: string;
+  description: React.ReactNode;
+}
+
+const GridItem = ({ area, icon, title, description }: GridItemProps) => {
+  return (
+    <li className={`min-h-[14rem] list-none ${area}`}>
+      <div className="relative h-full rounded-2xl border p-2 md:rounded-3xl md:p-3">
+        <GlowingEffect
+          blur={0}
+          borderWidth={3}
+          spread={80}
+          glow={true}
+          disabled={false}
+          proximity={64}
+          inactiveZone={0.01}
+        />
+        <div className="border-0.75 relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl p-6 md:p-6 dark:shadow-[0px_0px_27px_0px_#2D2D2D]">
+          <div className="relative flex flex-1 flex-col justify-between gap-3">
+            <div className="w-fit rounded-lg border border-gray-600 p-2">
+              {icon}
+            </div>
+            <div className="space-y-3">
+              <h3 className="-tracking-4 pt-0.5 font-sans text-xl/[1.375rem] font-semibold text-balance text-black md:text-2xl/[1.875rem] dark:text-white">
+                {title}
+              </h3>
+              <h2 className="font-sans text-sm/[1.125rem] text-black md:text-base/[1.375rem] dark:text-neutral-400 [&_b]:md:font-semibold [&_strong]:md:font-semibold">
+                {description}
+              </h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+};
+
+10. SHIMMER BUTTON
+import { ShimmerButton } from "@/registry/magicui/shimmer-button"
+
+export function ShimmerButtonDemo() {
+  return (
+    <ShimmerButton className="shadow-2xl">
+      <span className="text-center text-sm leading-none font-medium tracking-tight whitespace-pre-wrap text-white lg:text-lg dark:from-white dark:to-slate-900/10">
+        Shimmer Button
+      </span>
+    </ShimmerButton>
+  )
+}
+
+11. ANIMATED TOOLTIP
+import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
+
+export function TooltipDemo() {
+  return (
+    <TooltipTrigger>
+      <Button variant="outline">Hover</Button>
+      <Tooltip>
+        <p>Add to library</p>
+      </Tooltip>
+    </TooltipTrigger>
+  )
+}
+
+12. MOVING BORDER
+"use client";
+import React from "react";
+import { Button } from "../ui/moving-border";
+
+export function MovingBorderDemo() {
+  return (
+    <div>
+      <Button
+        borderRadius="1.75rem"
+        className="bg-white dark:bg-slate-900 text-black dark:text-white border-neutral-200 dark:border-slate-800"
+      >
+        Borders are cool
+      </Button>
+    </div>
+  );
+}
+
+13. ANIMATED MODAL
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Field, FieldGroup } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+export function DialogDemo() {
+  return (
+    <DialogTrigger>
+      <form>
+        <Button variant="outline">Open Dialog</Button>
+        <Dialog className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit profile</DialogTitle>
+            <DialogDescription>
+              Make changes to your profile here. Click save when you&apos;re
+              done.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field>
+              <Label htmlFor="name-1">Name</Label>
+              <Input id="name-1" name="name" defaultValue="Pedro Duarte" />
+            </Field>
+            <Field>
+              <Label htmlFor="username-1">Username</Label>
+              <Input id="username-1" name="username" defaultValue="@peduarte" />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <DialogClose variant="outline">Cancel</DialogClose>
+            <Button type="submit">Save changes</Button>
+          </DialogFooter>
+        </Dialog>
+      </form>
+    </DialogTrigger>
+  )
+}
+
+14. NUMBER TICKER
+import { NumberTicker } from "@/registry/magicui/number-ticker"
+
+export function NumberTickerDemo() {
+  return (
+    <NumberTicker
+      value={100}
+      className="text-8xl font-medium tracking-tighter whitespace-pre-wrap text-black dark:text-white"
+    />
+  )
+}
+
+15. ANIMATED TABS
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+
+export function TabsDemo() {
+  return (
+    <Tabs defaultSelectedKey="overview" className="w-[400px]">
+      <TabsList>
+        <TabsTrigger id="overview">Overview</TabsTrigger>
+        <TabsTrigger id="analytics">Analytics</TabsTrigger>
+        <TabsTrigger id="reports">Reports</TabsTrigger>
+        <TabsTrigger id="settings">Settings</TabsTrigger>
+      </TabsList>
+      <TabsContent id="overview">
+        <Card>
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+            <CardDescription>
+              View your key metrics and recent project activity. Track progress
+              across all your active projects.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            You have 12 active projects and 3 pending tasks.
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent id="analytics">
+        <Card>
+          <CardHeader>
+            <CardTitle>Analytics</CardTitle>
+            <CardDescription>
+              Track performance and user engagement metrics. Monitor trends and
+              identify growth opportunities.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Page views are up 25% compared to last month.
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent id="reports">
+        <Card>
+          <CardHeader>
+            <CardTitle>Reports</CardTitle>
+            <CardDescription>
+              Generate and download your detailed reports. Export data in
+              multiple formats for analysis.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            You have 5 reports ready and available to export.
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent id="settings">
+        <Card>
+          <CardHeader>
+            <CardTitle>Settings</CardTitle>
+            <CardDescription>
+              Manage your account preferences and options. Customize your
+              experience to fit your needs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Configure notifications, security, and themes.
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+16. BLUR FADE
+import BlurText from "./BlurText";
+
+const handleAnimationComplete = () => {
+  console.log('Animation completed!');
+};
+
+<BlurText
+  text="Isn't this so cool?!"
+  effect="blur"
+  animateBy="words"
+  direction="top"
+  staggerFrom="start"
+  trigger="view"
+  delay={200}
+  stepDuration={0.35}
+  blur={10}
+  distance={50}
+  onAnimationComplete={handleAnimationComplete}
+  className="text-2xl mb-8"
+  loop={false}
+  loopDelay={2}
+  focusOnHover={false}
+/>
+import BlurText from "./BlurText";
+
+const handleAnimationComplete = () => {
+  console.log('Animation completed!');
+};
+
+<BlurText
+  text="Isn't this so cool?!"
+  effect="blur"
+  animateBy="words"
+  direction="top"
+  staggerFrom="start"
+  trigger="view"
+  delay={200}
+  stepDuration={0.35}
+  blur={10}
+  distance={50}
+  onAnimationComplete={handleAnimationComplete}
+  className="text-2xl mb-8"
+  loop={false}
+  loopDelay={2}
+  focusOnHover={false}
+/>
+
+17. 3D CARD EFFECT 
+import TiltedCard, { TiltedCardLayer } from './TiltedCard';
+
+<TiltedCard
+  imageSrc="https://images.unsplash.com/photo-1778849097774-0ab2a873a858?w=900&q=80&auto=format&fit=crop"
+  altText="Sunset clouds"
+  captionText="Afterglow"
+  containerHeight="320px"
+  containerWidth="320px"
+  imageHeight="320px"
+  imageWidth="320px"
+  rotateAmplitude={12}
+  scaleOnHover={1.05}
+  glare={0.5}
+  shadow={0.5}
+  backContent={<p style={{ padding: 20 }}>The back of the card</p>}
+>
+  <TiltedCardLayer depth={30}>
+    <h3 style={{ position: 'absolute', left: 20, bottom: 16, color: '#fff' }}>Afterglow</h3>
+  </TiltedCardLayer>
+</TiltedCard>
+'use client';
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode
+} from 'react';
+
+type Axis = 'both' | 'horizontal' | 'vertical';
+
+export interface TiltedCardLayerProps {
+  depth?: number;
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+}
+
+export interface TiltedCardProps {
+  imageSrc?: string;
+  altText?: string;
+  captionText?: string;
+  containerHeight?: number | string;
+  containerWidth?: number | string;
+  imageHeight?: number | string;
+  imageWidth?: number | string;
+  scaleOnHover?: number;
+  rotateAmplitude?: number;
+  showTooltip?: boolean;
+  overlayContent?: ReactNode;
+  displayOverlayContent?: boolean;
+  overlayDepth?: number;
+  children?: ReactNode;
+  backContent?: ReactNode;
+  flipOnClick?: boolean;
+  flipped?: boolean;
+  onFlip?: (flipped: boolean) => void;
+  radius?: number | string;
+  perspective?: number | string;
+  smoothness?: number;
+  glare?: number;
+  glareColor?: string;
+  shadow?: number;
+  parallax?: number;
+  axis?: Axis;
+  reverse?: boolean;
+  trackWindow?: boolean;
+  floating?: boolean;
+  gyroscope?: boolean;
+  intro?: boolean;
+  introDelay?: number;
+  onClick?: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => void;
+  className?: string;
+  style?: CSSProperties;
+}
+
+interface Settings {
+  amplitude: number;
+  scale: number;
+  smoothness: number;
+  glare: number;
+  shadow: number;
+  parallax: number;
+  axis: Axis;
+  reverse: boolean;
+  trackWindow: boolean;
+  floating: boolean;
+  gyroscope: boolean;
+  intro: boolean;
+  introDelay: number;
+  flippable: boolean;
+  interactive: boolean;
+  flipped: boolean;
+  tooltip: boolean;
+}
+
+type OrientationRequest = { requestPermission?: () => Promise<string> };
+
+const FLIP_THRESHOLD = 6;
+
+const LAYER_TRANSFORM =
+  'translate3d(calc(var(--tc-px, 0) * var(--tc-depth, 0) * 1px), calc(var(--tc-py, 0) * var(--tc-depth, 0) * 1px), 0)';
+
+const GLARE_STYLE: CSSProperties = {
+  background:
+    'radial-gradient(farthest-corner circle at var(--tc-gx, 50%) var(--tc-gy, 50%), rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.34)) 0%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.331)) 9%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.285)) 18%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.202)) 27%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.108)) 36%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.035)) 45%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.003)) 54%, rgba(var(--tc-glare-rgb, 255, 255, 255), 0) 60%)'
+};
+
+const EDGE_STYLE: CSSProperties = {
+  background:
+    'radial-gradient(farthest-side circle at var(--tc-gx, 50%) var(--tc-gy, 50%), rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.85)) 0%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.71)) 18%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.43)) 36%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.16)) 54%, rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.02)) 72%, rgba(var(--tc-glare-rgb, 255, 255, 255), 0) 85%)',
+  WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+  WebkitMaskComposite: 'xor',
+  mask: 'linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)'
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const parseColor = (value: string): number[] | null => {
+  const text = String(value || '').trim();
+  const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text);
+  if (hex) {
+    const full = hex[1].length === 3 ? hex[1].replace(/./g, digit => digit + digit) : hex[1];
+    return [0, 2, 4].map(index => parseInt(full.slice(index, index + 2), 16));
+  }
+  const rgb = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(text);
+  if (rgb) return [rgb[1], rgb[2], rgb[3]].map(channel => clamp(Math.round(parseFloat(channel)), 0, 255));
+  return null;
+};
+
+const toLength = (value: number | string | undefined) => (typeof value === 'number' ? `${value}px` : value);
+
+const smoother = (t: number) => {
+  const x = clamp(t, 0, 1);
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+
+const step = (state: Record<string, number>, key: string, target: number, omega: number, zeta: number, dt: number) => {
+  const velocity = `v${key}`;
+  const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+  const h = dt / steps;
+  for (let index = 0; index < steps; index++) {
+    state[velocity] += (omega * omega * (target - state[key]) - 2 * zeta * omega * state[velocity]) * h;
+    state[key] += state[velocity] * h;
+  }
+  const settled = Math.abs(target - state[key]) < 0.001 && Math.abs(state[velocity]) < 0.01;
+  if (settled) {
+    state[key] = target;
+    state[velocity] = 0;
+  }
+  return !settled;
+};
+
+export const TiltedCardLayer = ({ depth = 20, className = '', style, children }: TiltedCardLayerProps) => (
+  <div
+    className={`absolute inset-0 ${className}`.trim()}
+    style={{ '--tc-depth': depth, transform: LAYER_TRANSFORM, ...style } as CSSProperties}
+  >
+    {children}
+  </div>
+);
+
+const TiltedCard = ({
+  imageSrc,
+  altText = 'Tilted card image',
+  captionText = '',
+  containerHeight = '300px',
+  containerWidth = '100%',
+  imageHeight = '300px',
+  imageWidth = '300px',
+  scaleOnHover = 1.05,
+  rotateAmplitude = 12,
+  showTooltip = true,
+  overlayContent = null,
+  displayOverlayContent = false,
+  overlayDepth = 30,
+  children,
+  backContent = null,
+  flipOnClick = true,
+  flipped,
+  onFlip,
+  radius = 15,
+  perspective = 800,
+  smoothness = 0.6,
+  glare = 0.5,
+  glareColor = '#ffffff',
+  shadow = 0.5,
+  parallax = 1,
+  axis = 'both',
+  reverse = false,
+  trackWindow = false,
+  floating = false,
+  gyroscope = true,
+  intro = true,
+  introDelay = 0,
+  onClick,
+  className = '',
+  style
+}: TiltedCardProps) => {
+  const figureRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const shadowRef = useRef<HTMLDivElement>(null);
+  const captionRef = useRef<HTMLElement>(null);
+  const wakeRef = useRef<(() => void) | null>(null);
+  const flipRef = useRef<(() => boolean) | null>(null);
+  const [innerFlipped, setInnerFlipped] = useState(false);
+  const controlled = typeof flipped === 'boolean';
+  const isFlipped = Boolean(backContent) && (controlled ? flipped : innerFlipped);
+
+  const settings: Settings = {
+    amplitude: clamp(rotateAmplitude, 0, 60),
+    scale: Math.max(0.5, scaleOnHover),
+    smoothness: clamp(smoothness, 0, 1),
+    glare: clamp(glare, 0, 1),
+    shadow: clamp(shadow, 0, 1),
+    parallax: Math.max(0, parallax),
+    axis,
+    reverse,
+    trackWindow,
+    floating,
+    gyroscope,
+    intro,
+    introDelay: Math.max(0, introDelay),
+    flippable: Boolean(backContent) && flipOnClick,
+    interactive: (Boolean(backContent) && flipOnClick) || Boolean(onClick),
+    flipped: isFlipped,
+    tooltip: showTooltip && Boolean(captionText)
+  };
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  useEffect(() => {
+    wakeRef.current?.();
+  });
+
+  useEffect(() => {
+    const figure = figureRef.current;
+    const body = bodyRef.current;
+    if (!figure || !body) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const state = {
+      rx: 0,
+      vrx: 0,
+      ry: 0,
+      vry: 0,
+      lift: 0,
+      vlift: 0,
+      ty: 0,
+      vty: 0,
+      flip: 0,
+      vflip: 0,
+      press: 0,
+      vpress: 0,
+      tip: 0,
+      vtip: 0,
+      shown: 0,
+      vshown: 0,
+      tx: 0,
+      tyy: 0
+    };
+    const pointer = { nx: 0, ny: 0, x: 0, y: 0, inside: false, mouse: false, seen: false, vx: 0, last: 0 };
+    const press = { active: false, x: 0, y: 0, moved: false };
+    const tilt = { gamma: 0, beta: 0, baseGamma: 0, baseBeta: 0, calibrated: false, live: false, asked: false };
+    let opacity = 1;
+    let entered = true;
+    let introAt = -1;
+    let time = Math.random() * 10;
+    let focused = false;
+    let raf = 0;
+    let last = 0;
+    let visible = true;
+
+    if (settingsRef.current.intro && !reduced) {
+      entered = false;
+      opacity = 0;
+      state.rx = 16;
+      state.ty = 22;
+      body.style.opacity = '0';
+    }
+
+    const frame = (now: number) => {
+      raf = 0;
+      const s = settingsRef.current;
+      const dt = clamp((now - last) / 1000 || 0, 0, 0.05);
+      last = Math.max(last, now);
+      time += dt;
+      let busy = false;
+
+      const amplitude = s.amplitude * (reduced ? 0.3 : 1);
+      const hovering = pointer.inside && pointer.mouse;
+      const touching = press.active && !pointer.mouse;
+      const following = hovering || touching || (s.trackWindow && pointer.seen && !coarse);
+      let inputX = 0;
+      let inputY = 0;
+      if (following) {
+        inputX = pointer.nx;
+        inputY = pointer.ny;
+      } else if (tilt.live && s.gyroscope) {
+        inputX = clamp((tilt.gamma - tilt.baseGamma) / 22, -1, 1);
+        inputY = clamp((tilt.beta - tilt.baseBeta) / 22, -1, 1);
+        tilt.baseGamma += (tilt.gamma - tilt.baseGamma) * (1 - Math.exp(-dt / 4));
+        tilt.baseBeta += (tilt.beta - tilt.baseBeta) * (1 - Math.exp(-dt / 4));
+        busy = true;
+      } else if (s.floating && !reduced && visible) {
+        inputX = 0.32 * Math.sin(time * 0.62) + 0.12 * Math.sin(time * 1.31 + 0.7);
+        inputY = 0.26 * Math.sin(time * 0.83 + 1.9) + 0.1 * Math.sin(time * 1.57);
+        busy = true;
+      }
+      if (s.axis === 'horizontal') inputY = 0;
+      if (s.axis === 'vertical') inputX = 0;
+      const sign = s.reverse ? -1 : 1;
+
+      const omega = 20 * Math.pow(0.2, s.smoothness);
+      const zeta = 1 - 0.3 * s.smoothness;
+      const lifted = hovering || touching || focused ? 1 : 0;
+
+      if (!entered && introAt >= 0 && now >= introAt) entered = true;
+      const settle = entered || !s.intro || reduced;
+      busy = step(state, 'rx', settle ? -inputY * amplitude * sign : state.rx, omega, zeta, dt) || busy;
+      busy = step(state, 'ry', settle ? inputX * amplitude * sign : state.ry, omega, zeta, dt) || busy;
+      busy =
+        step(
+          state,
+          'ty',
+          settle ? (s.floating && !following && !reduced ? -4 * Math.sin(time * 0.9) : 0) : state.ty,
+          omega * 0.8,
+          0.9,
+          dt
+        ) || busy;
+      busy = step(state, 'lift', lifted, omega, Math.max(zeta, 0.85), dt) || busy;
+      busy = step(state, 'flip', s.flipped ? 180 : 0, reduced ? 18 : 9.5, 0.72, dt) || busy;
+      busy = step(state, 'press', press.active && !press.moved && s.interactive ? 1 : 0, 26, 0.8, dt) || busy;
+      if (settle && opacity < 1) {
+        opacity = Math.min(1, opacity + dt / 0.45);
+        busy = true;
+      }
+
+      const active = lifted > 0 || state.lift > 0.01;
+      if (active !== figure.hasAttribute('data-active')) figure.toggleAttribute('data-active', active);
+      const scale = 1 + (s.scale - 1) * state.lift - 0.02 * state.press;
+      const rx = state.rx;
+      const ry = state.ry;
+      const radiansX = (rx * Math.PI) / 180;
+      const radiansY = (ry * Math.PI) / 180;
+      body.style.transform = `translate3d(0, ${state.ty.toFixed(2)}px, 0) rotateX(${rx.toFixed(3)}deg) rotateY(${(ry + state.flip).toFixed(3)}deg) scale(${scale.toFixed(4)})`;
+      body.style.opacity = opacity < 1 ? smoother(opacity).toFixed(3) : '';
+      body.style.setProperty('--tc-px', (Math.sin(radiansY) * s.parallax).toFixed(4));
+      body.style.setProperty('--tc-py', (-Math.sin(radiansX) * s.parallax).toFixed(4));
+      const reach = Math.max(amplitude, 1);
+      body.style.setProperty('--tc-gx', `${(50 + (ry / reach) * 46).toFixed(2)}%`);
+      body.style.setProperty('--tc-gy', `${(50 - (rx / reach) * 46).toFixed(2)}%`);
+      const energy = Math.min(1, Math.hypot(rx, ry) / reach);
+      body.style.setProperty(
+        '--tc-glare',
+        (s.glare * Math.max(state.lift, energy) * (opacity < 1 ? smoother(opacity) : 1)).toFixed(3)
+      );
+
+      const shade = shadowRef.current;
+      if (shade) {
+        const strength = s.shadow * (opacity < 1 ? smoother(opacity) : 1);
+        const offsetX = -Math.sin(radiansY) * 22;
+        const offsetY = 12 + 16 * state.lift + Math.sin(radiansX) * 18 - state.ty * 0.6;
+        const turn = Math.abs(Math.cos((state.flip * Math.PI) / 180));
+        const spread = scale * (0.86 + 0.04 * state.lift);
+        shade.style.transform = `translate3d(${offsetX.toFixed(2)}px, ${offsetY.toFixed(2)}px, 0) scale(${(spread * (0.2 + 0.8 * turn)).toFixed(4)}, ${spread.toFixed(4)})`;
+        shade.style.opacity = (strength * (0.6 + 0.4 * state.lift)).toFixed(3);
+      }
+
+      const caption = captionRef.current;
+      if (caption) {
+        const show = s.tooltip && hovering ? 1 : 0;
+        busy = step(state, 'shown', show, 16, 1, dt) || busy;
+        const follow = 1 - Math.exp(-dt / 0.035);
+        state.tx += (pointer.x - state.tx) * follow;
+        state.tyy += (pointer.y - state.tyy) * follow;
+        if (Math.abs(pointer.x - state.tx) + Math.abs(pointer.y - state.tyy) > 0.2) busy = true;
+        pointer.vx *= Math.exp(-dt / 0.08);
+        busy = step(state, 'tip', reduced ? 0 : clamp(-pointer.vx * 0.012, -14, 14), 18, 0.62, dt) || busy;
+        caption.style.transform = `translate3d(${state.tx.toFixed(1)}px, ${state.tyy.toFixed(1)}px, 0) rotate(${state.tip.toFixed(2)}deg)`;
+        caption.style.opacity = Math.max(0, state.shown).toFixed(3);
+      }
+
+      if ((busy || (!settle && s.intro)) && visible) raf = requestAnimationFrame(frame);
+    };
+
+    const wake = () => {
+      if (raf || !visible) return;
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    };
+    wakeRef.current = wake;
+
+    const locate = (event: PointerEvent, area: HTMLElement) => {
+      const rect = area.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        width: Math.max(1, rect.width),
+        height: Math.max(1, rect.height)
+      };
+    };
+
+    const track = (event: PointerEvent) => {
+      const spot = locate(event, figure);
+      const now = performance.now();
+      const elapsed = Math.max(8, now - (pointer.last || now - 16)) / 1000;
+      const dx = spot.x - pointer.x;
+      pointer.vx += (dx / elapsed - pointer.vx) * 0.5;
+      pointer.last = now;
+      pointer.x = spot.x;
+      pointer.y = spot.y;
+      pointer.nx = clamp((spot.x - spot.width / 2) / (spot.width / 2), -1, 1);
+      pointer.ny = clamp((spot.y - spot.height / 2) / (spot.height / 2), -1, 1);
+    };
+
+    const onEnter = (event: PointerEvent) => {
+      pointer.inside = true;
+      pointer.mouse = event.pointerType === 'mouse' || event.pointerType === 'pen';
+      const spot = locate(event, figure);
+      pointer.x = spot.x;
+      pointer.y = spot.y;
+      state.tx = spot.x;
+      state.tyy = spot.y;
+      pointer.vx = 0;
+      track(event);
+      wake();
+    };
+    const onMove = (event: PointerEvent) => {
+      pointer.mouse = event.pointerType === 'mouse' || event.pointerType === 'pen';
+      if (!pointer.inside && pointer.mouse) {
+        pointer.inside = true;
+        const spot = locate(event, figure);
+        pointer.x = spot.x;
+        pointer.y = spot.y;
+        state.tx = spot.x;
+        state.tyy = spot.y;
+        pointer.vx = 0;
+      }
+      track(event);
+      if (press.active && Math.hypot(event.clientX - press.x, event.clientY - press.y) > FLIP_THRESHOLD)
+        press.moved = true;
+      wake();
+    };
+    const onLeave = () => {
+      pointer.inside = false;
+      pointer.vx = 0;
+      wake();
+    };
+    const onWindowMove = (event: PointerEvent) => {
+      if (pointer.inside && pointer.mouse && !figure.contains(event.target as Node)) onLeave();
+      if (!settingsRef.current.trackWindow || pointer.inside) return;
+      const rect = figure.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      pointer.seen = true;
+      pointer.nx = clamp((event.clientX - cx) / Math.max(1, window.innerWidth / 2), -1, 1);
+      pointer.ny = clamp((event.clientY - cy) / Math.max(1, window.innerHeight / 2), -1, 1);
+      wake();
+    };
+    const onWindowLeave = () => {
+      pointer.seen = false;
+      wake();
+    };
+
+    const askMotion = () => {
+      const s = settingsRef.current;
+      if (!s.gyroscope || !coarse || tilt.asked) return;
+      tilt.asked = true;
+      const request = (window.DeviceOrientationEvent as unknown as OrientationRequest | undefined)?.requestPermission;
+      if (typeof request === 'function') request.call(window.DeviceOrientationEvent).catch(() => {});
+    };
+
+    const onDown = (event: PointerEvent) => {
+      press.active = true;
+      press.moved = false;
+      press.x = event.clientX;
+      press.y = event.clientY;
+      pointer.mouse = event.pointerType === 'mouse' || event.pointerType === 'pen';
+      if (!pointer.mouse) {
+        pointer.inside = true;
+        track(event);
+      }
+      askMotion();
+      wake();
+    };
+    const onUp = (event: PointerEvent) => {
+      if (!press.active) return;
+      press.active = false;
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') pointer.inside = false;
+      wake();
+    };
+    const onCancel = () => {
+      press.active = false;
+      press.moved = true;
+      pointer.inside = false;
+      wake();
+    };
+
+    const onOrientation = (event: DeviceOrientationEvent) => {
+      if (event.gamma == null || event.beta == null) return;
+      tilt.gamma = event.gamma;
+      tilt.beta = event.beta;
+      if (!tilt.calibrated) {
+        tilt.baseGamma = event.gamma;
+        tilt.baseBeta = event.beta;
+        tilt.calibrated = true;
+      }
+      tilt.live = coarse;
+      wake();
+    };
+
+    flipRef.current = () => {
+      if (press.moved) return false;
+      return true;
+    };
+
+    const onFocus = () => {
+      focused = figure.matches(':focus-visible');
+      wake();
+    };
+    const onBlur = () => {
+      focused = false;
+      wake();
+    };
+
+    figure.addEventListener('pointerenter', onEnter);
+    figure.addEventListener('pointermove', onMove);
+    figure.addEventListener('pointerleave', onLeave);
+    figure.addEventListener('pointerdown', onDown);
+    figure.addEventListener('focus', onFocus);
+    figure.addEventListener('blur', onBlur);
+    window.addEventListener('pointerup', onUp, { passive: true });
+    window.addEventListener('pointercancel', onCancel, { passive: true });
+    window.addEventListener('pointermove', onWindowMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onWindowLeave);
+    window.addEventListener('deviceorientation', onOrientation);
+
+    const observer = new IntersectionObserver(entries => {
+      visible = entries.some(entry => entry.isIntersecting);
+      if (visible && !entered && introAt < 0) introAt = performance.now() + settingsRef.current.introDelay;
+      wake();
+    });
+    observer.observe(figure);
+
+    wake();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      wakeRef.current = null;
+      flipRef.current = null;
+      observer.disconnect();
+      figure.removeEventListener('pointerenter', onEnter);
+      figure.removeEventListener('pointermove', onMove);
+      figure.removeEventListener('pointerleave', onLeave);
+      figure.removeEventListener('pointerdown', onDown);
+      figure.removeEventListener('focus', onFocus);
+      figure.removeEventListener('blur', onBlur);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      window.removeEventListener('pointermove', onWindowMove);
+      document.documentElement.removeEventListener('pointerleave', onWindowLeave);
+      window.removeEventListener('deviceorientation', onOrientation);
+    };
+  }, []);
+
+  const flippable = Boolean(backContent) && flipOnClick;
+  const interactive = flippable || Boolean(onClick);
+
+  const toggle = () => {
+    const next = !isFlipped;
+    if (!controlled) setInnerFlipped(next);
+    onFlip?.(next);
+  };
+
+  const activate = (event: MouseEvent<HTMLElement>) => {
+    if (flipRef.current && !flipRef.current()) return;
+    if (flippable) toggle();
+    onClick?.(event);
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!interactive || event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    if (flippable) toggle();
+    onClick?.(event);
+  };
+
+  const corner = toLength(radius);
+  const glareRgb = (parseColor(glareColor) || [255, 255, 255]).join(', ');
+  const bleed = Math.ceil(Math.sin((clamp(rotateAmplitude, 0, 60) * Math.PI) / 180) * 24 * Math.max(0, parallax)) + 1;
+
+  return (
+    <figure
+      ref={figureRef}
+      className={`tilted-card group relative m-0 flex select-none items-center justify-center outline-none [-webkit-tap-highlight-color:transparent] [touch-action:pan-y_pinch-zoom] data-[active]:z-[2] data-[interactive]:cursor-pointer ${className}`.trim()}
+      style={{
+        width: toLength(containerWidth),
+        height: toLength(containerHeight),
+        perspective: toLength(perspective),
+        ...style
+      }}
+      data-interactive={interactive ? '' : undefined}
+      data-flipped={isFlipped ? '' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      role={interactive ? 'button' : undefined}
+      aria-pressed={flippable ? isFlipped : undefined}
+      aria-label={interactive ? captionText || altText : undefined}
+      onClick={interactive ? activate : undefined}
+      onKeyDown={onKeyDown}
+    >
+      <div
+        ref={shadowRef}
+        className="pointer-events-none absolute inset-0 m-auto max-h-full max-w-full bg-[var(--tc-shadow-color,rgba(0,0,0,0.55))] opacity-0 blur-[20px] will-change-[transform,opacity]"
+        aria-hidden="true"
+        style={{ width: toLength(imageWidth), height: toLength(imageHeight), borderRadius: corner }}
+      />
+      <div
+        ref={bodyRef}
+        className="relative max-h-full max-w-full [transform-style:preserve-3d]"
+        style={
+          {
+            width: toLength(imageWidth),
+            height: toLength(imageHeight),
+            '--tc-radius': corner,
+            '--tc-glare-rgb': glareRgb
+          } as CSSProperties
+        }
+      >
+        <div className="tilted-card__face tilted-card__front absolute inset-0 isolate overflow-hidden rounded-[var(--tc-radius)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden]">
+          {imageSrc && (
+            <img
+              className="pointer-events-none absolute block max-w-none object-cover"
+              src={imageSrc}
+              alt={altText}
+              draggable={false}
+              style={
+                {
+                  '--tc-depth': -24,
+                  transform: LAYER_TRANSFORM,
+                  top: `-${bleed}px`,
+                  left: `-${bleed}px`,
+                  width: `calc(100% + ${bleed * 2}px)`,
+                  height: `calc(100% + ${bleed * 2}px)`
+                } as CSSProperties
+              }
+            />
+          )}
+          {children}
+          <span
+            className="pointer-events-none absolute inset-0 z-[5] mix-blend-screen"
+            style={GLARE_STYLE}
+            aria-hidden="true"
+          />
+          <span
+            className="tilted-card__rim pointer-events-none absolute inset-0 z-[6] rounded-[inherit] shadow-[inset_0_0_0_1px_var(--tc-rim-color,rgba(255,255,255,0.08)),inset_0_1px_0_var(--tc-rim-light,rgba(255,255,255,0.12))] group-focus-visible:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),inset_0_0_0_3px_rgba(0,0,0,0.35)]"
+            aria-hidden="true"
+          />
+          <span
+            className="pointer-events-none absolute inset-0 z-[7] box-border rounded-[inherit] p-px"
+            style={EDGE_STYLE}
+            aria-hidden="true"
+          />
+        </div>
+        {backContent && (
+          <div
+            className="tilted-card__face tilted-card__back absolute inset-0 isolate overflow-hidden rounded-[var(--tc-radius)] [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)]"
+            aria-hidden={!isFlipped}
+          >
+            {backContent}
+            <span
+              className="pointer-events-none absolute inset-0 z-[5] mix-blend-screen"
+              style={GLARE_STYLE}
+              aria-hidden="true"
+            />
+            <span
+              className="tilted-card__rim pointer-events-none absolute inset-0 z-[6] rounded-[inherit] shadow-[inset_0_0_0_1px_var(--tc-rim-color,rgba(255,255,255,0.08)),inset_0_1px_0_var(--tc-rim-light,rgba(255,255,255,0.12))] group-focus-visible:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.7),inset_0_0_0_3px_rgba(0,0,0,0.35)]"
+              aria-hidden="true"
+            />
+            <span
+              className="pointer-events-none absolute inset-0 z-[7] box-border rounded-[inherit] p-px"
+              style={EDGE_STYLE}
+              aria-hidden="true"
+            />
+          </div>
+        )}
+        {displayOverlayContent && overlayContent && (
+          <div
+            className="absolute inset-0 z-[2] [-webkit-backface-visibility:hidden] [backface-visibility:hidden]"
+            style={{ transform: `translateZ(${overlayDepth}px)` }}
+          >
+            {overlayContent}
+          </div>
+        )}
+      </div>
+      {showTooltip && captionText && (
+        <figcaption
+          ref={captionRef}
+          className="pointer-events-none absolute left-0 top-0 z-[3] ml-3.5 mt-4 whitespace-nowrap rounded-[7px] bg-white px-[9px] py-[5px] text-[12px] font-medium leading-4 text-[#18181b] opacity-0 shadow-[0_0_0_1px_rgba(24,24,27,0.08),0_8px_18px_-8px_rgba(0,0,0,0.45)] [transform-origin:0_0] will-change-[transform,opacity]"
+        >
+          {captionText}
+        </figcaption>
+      )}
+    </figure>
+  );
+};
+
+export default TiltedCard;
+
+18. CARD SPOTLIGHT
+import { CardSpotlight } from "@/components/ui/card-spotlight";
+
+export function CardSpotlightDemo() {
+  return (
+    <CardSpotlight className="h-96 w-96">
+      <p className="text-xl font-bold relative z-20 mt-2 text-white">
+        Authentication steps
+      </p>
+      <div className="text-neutral-200 mt-4 relative z-20">
+        Follow these steps to secure your account:
+        <ul className="list-none  mt-2">
+          <Step title="Enter your email address" />
+          <Step title="Create a strong password" />
+          <Step title="Set up two-factor authentication" />
+          <Step title="Verify your identity" />
+        </ul>
+      </div>
+      <p className="text-neutral-300 mt-4 relative z-20 text-sm">
+        Ensuring your account is properly secured helps protect your personal
+        information and data.
+      </p>
+    </CardSpotlight>
+  );
+}
+
+const Step = ({ title }: { title: string }) => {
+  return (
+    <li className="flex gap-2 items-start">
+      <CheckIcon />
+      <p className="text-white">{title}</p>
+    </li>
+  );
+};
+
+const CheckIcon = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-4 w-4 text-blue-500 mt-1 shrink-0"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path
+        d="M12 2c-.218 0 -.432 .002 -.642 .005l-.616 .017l-.299 .013l-.579 .034l-.553 .046c-4.785 .464 -6.732 2.411 -7.196 7.196l-.046 .553l-.034 .579c-.005 .098 -.01 .198 -.013 .299l-.017 .616l-.004 .318l-.001 .324c0 .218 .002 .432 .005 .642l.017 .616l.013 .299l.034 .579l.046 .553c.464 4.785 2.411 6.732 7.196 7.196l.553 .046l.579 .034c.098 .005 .198 .01 .299 .013l.616 .017l.642 .005l.642 -.005l.616 -.017l.299 -.013l.579 -.034l.553 -.046c4.785 -.464 6.732 -2.411 7.196 -7.196l.046 -.553l.034 -.579c.005 -.098 .01 -.198 .013 -.299l.017 -.616l.005 -.642l-.005 -.642l-.017 -.616l-.013 -.299l-.034 -.579l-.046 -.553c-.464 -4.785 -2.411 -6.732 -7.196 -7.196l-.553 -.046l-.579 -.034a28.058 28.058 0 0 0 -.299 -.013l-.616 -.017l-.318 -.004l-.324 -.001zm2.293 7.293a1 1 0 0 1 1.497 1.32l-.083 .094l-4 4a1 1 0 0 1 -1.32 .083l-.094 -.083l-2 -2a1 1 0 0 1 1.32 -1.497l.094 .083l1.293 1.292l3.293 -3.292z"
+        fill="currentColor"
+        strokeWidth="0"
+      />
+    </svg>
+  );
+};
+
+19. BACKGROUND GRADIENT ANIMATION
+Help me add the "background-gradient-demo" component from Aceternity UI to my project. Its source files and dependencies are at https://ui.aceternity.com/registry/background-gradient-demo.json. First check that the project uses shadcn/ui, Tailwind CSS v4 and TypeScript.
+
+npx shadcn@latest add @aceternity/background-gradient
+
+"use client";
+import React from "react";
+import { BackgroundGradient } from "../ui/background-gradient";
+import { IconAppWindow } from "@tabler/icons-react";
+
+
+export function BackgroundGradientDemo() {
+  return (
+    <div>
+      <BackgroundGradient className="rounded-[22px] max-w-sm p-4 sm:p-10 bg-white dark:bg-zinc-900">
+        <img
+          src={`/jordans.webp`}
+          alt="jordans"
+          height="400"
+          width="400"
+          className="object-contain"
+        />
+        <p className="text-base sm:text-xl text-black mt-4 mb-2 dark:text-neutral-200">
+          Air Jordan 4 Retro Reimagined
+        </p>
+
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          The Air Jordan 4 Retro Reimagined Bred will release on Saturday,
+          February 17, 2024. Your best opportunity to get these right now is by
+          entering raffles and waiting for the official releases.
+        </p>
+        <button className="rounded-full pl-4 pr-1 py-1 text-white flex items-center space-x-1 bg-black mt-4 text-xs font-bold dark:bg-zinc-800">
+          <span>Buy now </span>
+          <span className="bg-zinc-700 rounded-full text-[0.6rem] px-2 py-0 text-white">
+            $100
+          </span>
+        </button>
+      </BackgroundGradient>
+    </div>
+  );
+}
+
+20. ANIMATED ACCORDIAN
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
+export function AccordionDemo() {
+  return (
+    <Accordion defaultExpandedKeys={["shipping"]} className="max-w-lg">
+      <AccordionItem id="shipping">
+        <AccordionTrigger>What are your shipping options?</AccordionTrigger>
+        <AccordionContent>
+          We offer standard (5-7 days), express (2-3 days), and overnight
+          shipping. Free shipping on international orders.
+        </AccordionContent>
+      </AccordionItem>
+      <AccordionItem id="returns">
+        <AccordionTrigger>What is your return policy?</AccordionTrigger>
+        <AccordionContent>
+          Returns accepted within 30 days. Items must be unused and in original
+          packaging. Refunds processed within 5-7 business days.
+        </AccordionContent>
+      </AccordionItem>
+      <AccordionItem id="support">
+        <AccordionTrigger>How can I contact customer support?</AccordionTrigger>
+        <AccordionContent>
+          Reach us via email, live chat, or phone. We respond within 24 hours
+          during business days.
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
+}
